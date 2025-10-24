@@ -14,7 +14,7 @@ graph = LiteraryEntityExtractor(llm=llm)
 for i, ch in enumerate(book.content):
     for j, chunk in enumerate(ch):
         print(i, j)
-        res = graph.invoke(chunk)
+        res = graph.invoke(chunk[:1000])
         print('res["characters"]', res['characters'])
         print('res["locations"]', res['locations'])
         print('res["summary"]', res['summary'])

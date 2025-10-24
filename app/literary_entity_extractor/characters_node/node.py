@@ -67,4 +67,5 @@ class CharactersNode():
                 'messages': msg,
             }
         except Exception as e:
+            print(e)
             return {'error': e}
