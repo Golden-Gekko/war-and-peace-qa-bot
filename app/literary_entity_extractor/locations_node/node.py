@@ -50,7 +50,10 @@ class LocationsNode():
 
     def node(self, state: CreatorState) -> dict:
         try:
-            response = self.chain.invoke({'question': state.chunk})
+            if state.summary:
+                response = self.chain.invoke({'question': state.summary})
+            else:
+                response = self.chain.invoke({'question': state.chunk})
 
             content = (
                 'Локации: ' + ', '.join(c for c in response.locations))

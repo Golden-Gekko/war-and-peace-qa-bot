@@ -16,8 +16,8 @@ class CreatorState(BaseModel):
         default=[],
         description='Список локаций'
     )
-    summary: List[str] = Field(
-        default=[],
+    summary: str = Field(
+        default='',
         description='Суммаризированный моделью чанк'
     )
     messages: List[BaseMessage] = Field(

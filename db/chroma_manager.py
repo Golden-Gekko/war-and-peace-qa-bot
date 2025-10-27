@@ -1,6 +1,7 @@
 import json
 import os
-from typing import Any, Dict, List
+from pathlib import Path
+from typing import Any, Dict, List, Union
 from tqdm import tqdm
 
 import chromadb
@@ -27,8 +28,9 @@ class ChromaManager:
         return self.collection
 
     def load_from_json(
-            self, json_path: str,
-            collection_name: str = 'war_and_peace'):
+        self, json_path: Union[str, Path],
+        collection_name: str = 'war_and_peace'
+    ):
         """
         Ожидаемый формат JSON: список объектов вида:
         {
@@ -50,13 +52,13 @@ class ChromaManager:
         metadatas = []
 
         for i, item in enumerate(tqdm(data, desc='Preparing data for Chroma')):
-            doc_id = f'chunk_{i}'
+            doc_id = item.get('id', f'chunk_{i}')
             text = item.get('text')
             embedding_str = item.get('embedding')
             if isinstance(embedding_str, str):
                 embedding = json.loads(embedding_str)
             else:
-                embedding = embedding_str            
+                embedding = embedding_str
             characters = item.get('characters', [])
             locations = item.get('locations', [])
 
@@ -77,7 +79,8 @@ class ChromaManager:
         )
 
         print(
-            f'Загружено {len(ids)} документов в коллекцию "{collection_name}"')
+            f'Из файла "{json_path}" загружено {len(ids)} документов в '
+            f'коллекцию "{collection_name}"')
 
     def query(
             self,
@@ -89,14 +92,3 @@ class ChromaManager:
             n_results=n_results,
             where=where
         )
-
-
-if __name__ == "__main__":
-    import sys
-    if len(sys.argv) != 2:
-        print("Usage: python chroma_manager.py <path_to_chunks.json>")
-        sys.exit(1)
-
-    json_path = sys.argv[1]
-    manager = ChromaManager(persist_directory='./chroma_db')
-    manager.load_from_json(json_path)

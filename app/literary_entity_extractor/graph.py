@@ -14,10 +14,10 @@ class LiteraryEntityExtractor():
         self.workflow.add_node('locations_node', LocationsNode(llm=llm).node)
         self.workflow.add_node('summary_node', SummaryNode(llm=llm).node)
 
-        self.workflow.set_entry_point('characters_node')
+        self.workflow.set_entry_point('summary_node')
+        self.workflow.add_edge('summary_node', 'characters_node')
         self.workflow.add_edge('characters_node', 'locations_node')
-        self.workflow.add_edge('locations_node', 'summary_node')
-        self.workflow.set_finish_point('summary_node')
+        self.workflow.set_finish_point('locations_node')
 
         self.graph = self.workflow.compile()
 
