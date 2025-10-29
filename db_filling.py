@@ -1,12 +1,12 @@
 import json
 import os
 from pathlib import Path
+import sys
 from typing import List, Dict, Any
 from tqdm import tqdm
 import uuid
 
-from langchain_ollama import ChatOllama
-from langchain_ollama import OllamaEmbeddings
+from langchain_ollama import ChatOllama, OllamaEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from app.literary_entity_extractor import LiteraryEntityExtractor
@@ -91,7 +91,6 @@ def create_json(file_path: str, start_from: int = 0) -> str:
                 }
             }
             all_chunks.append(record)
-            # break
 
         output_path = os.path.join(json_path, f'part_{block_idx + 1}.json')
         with open(output_path, 'w', encoding='utf-8') as f:
@@ -101,22 +100,28 @@ def create_json(file_path: str, start_from: int = 0) -> str:
     return json_path
 
 
-def main(file_path: str, start_from: int = 0):
-    try:
-        json_path = Path(create_json(file_path, start_from=start_from))
-        manager = ChromaManager(persist_directory='./chroma_db')
-        for json_file in json_path.glob('*.json'):
-            manager.load_from_json(json_file)
-    except KeyboardInterrupt:
-        print('Преобразование прервано пользователем')
+def main(file_path: str | None = None, start_from: int = 0):
+    if file_path:
+        try:
+            json_path = Path(create_json(file_path, start_from=start_from))
+        except KeyboardInterrupt:
+            print('Преобразование прервано пользователем')
+            return
+    else:
+        json_path = Path(
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), 'JSON'))
+
+    manager = ChromaManager(persist_directory='./chroma_db')
+    manager.clear_collection()
+    for json_file in json_path.glob('*.json'):
+        manager.load_from_json(json_file)
 
 
 if __name__ == "__main__":
-    import sys
     if len(sys.argv) < 2:
-        print(
-            'Использование: python db_filling.py <путь_к_файлу> [start_from]')
+        main()
         sys.exit(1)
+
     file_path = sys.argv[1]
     start_from = 0
 

@@ -19,13 +19,24 @@ class ChromaManager:
             settings=Settings(anonymized_telemetry=False)
         )
 
-    def create_or_get_collection(
+    def _create_or_get_collection(
             self, name: str = 'war_and_peace') -> Collection:
         self.collection = self.client.get_or_create_collection(
             name=name,
             metadata={'hnsw:space': 'cosine'}
         )
         return self.collection
+
+    def clear_collection(
+            self, collection_name: str = 'war_and_peace') -> None:
+        try:
+            collection = self.client.get_collection(collection_name)
+            all_ids = collection.get(include=[])['ids']
+            if all_ids:
+                collection.delete(ids=all_ids)
+        except Exception as e:
+            raise ValueError(
+                f'Ошибка при очистке коллекции "{collection_name}": {e}')
 
     def load_from_json(
         self, json_path: Union[str, Path],
@@ -34,17 +45,18 @@ class ChromaManager:
         """
         Ожидаемый формат JSON: список объектов вида:
         {
-          'text': str,
-          'embedding': str | list[float],
-          'characters': list[str] | None,
-          'locations': list[str] | None
+            'text': str,
+            'embedding': str | list[float],
+            'characters': list[str] | None,
+            'locations': list[str] | None,
+            'prev_id': str | None,
+            'next_id': str | None
         }
         """
-
         with open(json_path, 'r', encoding='utf-8') as f:
             data: List[Dict[str, Any]] = json.load(f)
 
-        self.create_or_get_collection(collection_name)
+        self._create_or_get_collection(collection_name)
 
         ids = []
         embeddings = []
@@ -52,24 +64,31 @@ class ChromaManager:
         metadatas = []
 
         for i, item in enumerate(tqdm(data, desc='Preparing data for Chroma')):
-            doc_id = item.get('id', f'chunk_{i}')
-            text = item.get('text')
+            ids.append(item.get('id', f'chunk_{i}'))
+            documents.append(item.get('text'))
+
             embedding_str = item.get('embedding')
             if isinstance(embedding_str, str):
                 embedding = json.loads(embedding_str)
             else:
                 embedding = embedding_str
-            characters = item.get('characters', [])
-            locations = item.get('locations', [])
-
-            ids.append(doc_id)
             embeddings.append(embedding)
-            documents.append(text)
 
-            metadatas.append({
-                'characters': ', '.join(characters) if characters else '',
-                'locations': ', '.join(locations) if locations else '',
-            })
+            def flat_meta(name: str) -> str:
+                if name in metadata and metadata[name]:
+                    return ', '.join(metadata[name])
+                return ''
+
+            metadata = item.get('metadata', {})
+            metadata['characters'] = flat_meta('characters')
+            pl = metadata.get('locations', [''])
+            metadata['primary_location'] = pl[0] if pl else ''
+            metadata['locations'] = flat_meta('locations')
+            if not metadata['prev_id']:
+                metadata['prev_id'] = ''
+            if not metadata['next_id']:
+                metadata['next_id'] = ''
+            metadatas.append(metadata)
 
         self.collection.add(
             ids=ids,
@@ -83,12 +102,16 @@ class ChromaManager:
             f'коллекцию "{collection_name}"')
 
     def query(
-            self,
-            query_embedding: List[float],
-            n_results: int = 5,
-            where: Dict = None):
+        self, query_embedding: List[float], n_results: int = 5,
+        where: Dict = None, collection_name: str = 'war_and_peace'
+    ):
+        self._create_or_get_collection(collection_name)
         return self.collection.query(
             query_embeddings=[query_embedding],
             n_results=n_results,
             where=where
         )
+
+    def get(self, id: str, collection_name: str = 'war_and_peace'):
+        self._create_or_get_collection(collection_name)
+        return self.collection.get(ids=[id])
