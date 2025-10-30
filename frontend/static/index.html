@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Война и Мир - Чат с Агентом</title>
+    <link rel="stylesheet" href="/static/style/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="book-decoration book-1">📖</div>
+            <div class="book-decoration book-2">📚</div>
+            <h1>Война и Мир</h1>
+            <p class="subtitle">Чат с агентом по роману Льва Толстого</p>
+        </header>
+
+        <div class="chat-container">
+            <div class="chat-messages" id="chat-messages">
+                <div class="message agent-message">
+                    <div class="message-header">Агент "Война и Мир"</div>
+                    <div class="message-content">
+                        Здравствуйте! Я — ваш помощник по роману Льва Толстого "Война и Мир". 
+                        Задавайте любые вопросы о персонажах, сюжете, историческом контексте или философских идеях этого великого произведения.
+                    </div>
+                </div>
+            </div>
+            <div class="typing-indicator" id="typing-indicator">
+                Агент печатает...
+            </div>
+            <div class="input-container">
+                <textarea 
+                    id="message-input" 
+                    placeholder="Введите ваш вопрос о романе 'Война и Мир'..."
+                    rows="1"
+                ></textarea>
+                <button id="send-button">Отправить</button>
+            </div>
+        </div>
+    </div>
+    <script type="importmap">
+    {
+      "imports": {
+        "marked": "/static/js/marked/marked.esm.js"
+      }
+    }
+    </script>
+    <script src="/static/js/script.js" type="module"></script>
+</body>
+</html>

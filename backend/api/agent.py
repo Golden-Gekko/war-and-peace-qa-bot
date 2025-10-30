@@ -11,7 +11,7 @@ from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from langchain_core.runnables import RunnableConfig
 from langchain_ollama import ChatOllama
 
-from app.tools.contextual_retrieval_tool import ContextualRetrievalTool
+from api.tools.contextual_retrieval_tool import ContextualRetrievalTool
 
 
 class WarAndPeaceAgent:

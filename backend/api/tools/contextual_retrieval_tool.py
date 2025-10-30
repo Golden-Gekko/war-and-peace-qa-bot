@@ -6,7 +6,7 @@ from langchain_core.tools import BaseTool
 from langchain_ollama import ChatOllama, OllamaEmbeddings
 from pydantic import BaseModel, Field
 
-from app.literary_entity_extractor import LiteraryEntityExtractor
+from api.literary_entity_extractor import LiteraryEntityExtractor
 from db.chroma_manager import ChromaManager
 
 
