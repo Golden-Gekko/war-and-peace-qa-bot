@@ -152,5 +152,5 @@ $RECYCLE.BIN/
 #книги
 *.epub
 *.fb2
-JSON/
+# JSON/
 chroma_db/
