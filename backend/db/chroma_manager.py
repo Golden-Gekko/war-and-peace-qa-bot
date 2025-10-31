@@ -30,7 +30,7 @@ class ChromaManager:
     def clear_collection(
             self, collection_name: str = 'war_and_peace') -> None:
         try:
-            collection = self.client.get_collection(collection_name)
+            collection = self._create_or_get_collection(collection_name)
             all_ids = collection.get(include=[])['ids']
             if all_ids:
                 collection.delete(ids=all_ids)

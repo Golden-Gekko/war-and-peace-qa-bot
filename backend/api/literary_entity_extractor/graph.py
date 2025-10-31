@@ -7,15 +7,19 @@ from .summary_node import SummaryNode
 
 
 class LiteraryEntityExtractor():
-    def __init__(self, llm):
+    def __init__(self, llm, need_summary: bool = True):
         self.workflow = StateGraph(CreatorState)
 
         self.workflow.add_node('characters_node', CharactersNode(llm=llm).node)
         self.workflow.add_node('locations_node', LocationsNode(llm=llm).node)
-        self.workflow.add_node('summary_node', SummaryNode(llm=llm).node)
+        if need_summary:
+            self.workflow.add_node('summary_node', SummaryNode(llm=llm).node)
 
-        self.workflow.set_entry_point('summary_node')
-        self.workflow.add_edge('summary_node', 'characters_node')
+        if need_summary:
+            self.workflow.set_entry_point('summary_node')
+            self.workflow.add_edge('summary_node', 'characters_node')
+        else:
+            self.workflow.set_entry_point('characters_node')
         self.workflow.add_edge('characters_node', 'locations_node')
         self.workflow.set_finish_point('locations_node')
 

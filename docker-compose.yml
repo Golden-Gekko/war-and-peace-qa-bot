@@ -1,0 +1,53 @@
+# docker-compose.yml
+version: '3.8'
+
+volumes:
+  ollama_models:
+  chroma_data:
+
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama/models
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: backend
+    env_file:
+      - ./backend/.env
+    volumes:
+      - chroma_data:/app/chroma_db
+    depends_on:
+      - ollama
+    environment:
+      - OLLAMA_HOST=ollama
+      - OLLAMA_PORT=11434
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: frontend
+    env_file:
+      - ./frontend/.env
+    ports:
+      - "${FRONTEND_PORT:-8000}:8001"
+    depends_on:
+      - backend
+    environment:
+      - BACKEND_HOST=backend
+      - BACKEND_PORT=8000

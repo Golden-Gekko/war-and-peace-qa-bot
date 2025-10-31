@@ -4,16 +4,22 @@ import yaml
 
 from langchain_core.tools import BaseTool
 from langchain_ollama import ChatOllama, OllamaEmbeddings
+from loguru import logger
 from pydantic import BaseModel, Field
 
 from api.literary_entity_extractor import LiteraryEntityExtractor
 from db.chroma_manager import ChromaManager
 
+OLLAMA_HOST = os.getenv('OLLAMA_HOST', 'localhost')
+OLLAMA_PORT = os.getenv('OLLAMA_PORT', '11434')
+OLLAMA_BASE_URL = f'http://{OLLAMA_HOST}:{OLLAMA_PORT}'
+MAX_LEN = 100
+
 
 def get_llm():
     return ChatOllama(
         model=os.getenv('LLM_MODEL', 'qwen3:14b'),
-        base_url=os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434'),
+        base_url=OLLAMA_BASE_URL,
         temperature=0.0
     )
 
@@ -21,7 +27,7 @@ def get_llm():
 def get_embedding_model():
     return OllamaEmbeddings(
         model=os.getenv('EMBEDDING_MODEL', 'bge-m3:567m'),
-        base_url=os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434')
+        base_url=OLLAMA_BASE_URL
     )
 
 
@@ -100,15 +106,18 @@ class ContextualRetrievalTool(BaseTool):
 
     def _run(self, query: str, **kwargs: Any) -> str:
         try:
-            extractor = LiteraryEntityExtractor(llm=get_llm())
+            logger.info('Вызван "ContextualRetrievalTool"')
+            extractor = LiteraryEntityExtractor(
+                llm=get_llm(), need_summary=False)
             state = extractor.invoke(query)
             characters = state.get('characters', [])
             locations = state.get('locations', [])
+            logger.info(f'Извлечено "Сharacters": {characters}')
+            logger.info(f'Извлечено "Locations" : {locations}')
 
             where = None
             if locations:
                 where = {'primary_location': locations[0]}
-
             embedder = get_embedding_model()
             chroma = get_chroma_manager()
             query_embedding = embedder.embed_query(query)
@@ -123,18 +132,20 @@ class ContextualRetrievalTool(BaseTool):
                 results = chroma.query(query_embedding=query_embedding)
 
             filtered_by_chars = self._filter_by_characters(results, characters)
-
             if not filtered_by_chars:
                 fallback = self._get_first(results)
                 if fallback:
                     filtered_by_chars = fallback
                 else:
+                    logger.info('Не найдено релевантных фрагментов')
                     return 'Не найдено релевантных фрагментов.'
 
             expanded_context = self._expand_context_with_neighbors(
                 chroma, filtered_by_chars)
-
+            for item in expanded_context:
+                logger.info(f'Получен ответ от БД: {item[:MAX_LEN]}')
             return "\n\n".join(expanded_context)
 
         except Exception as e:
+            logger.error(f'Ошибка при поиске контекста: {str(e)}')
             return f'Ошибка при поиске контекста: {str(e)}'

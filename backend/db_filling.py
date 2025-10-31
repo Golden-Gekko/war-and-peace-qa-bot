@@ -1,3 +1,4 @@
+import httpx
 import json
 import os
 from pathlib import Path
@@ -12,24 +13,52 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from api.literary_entity_extractor import LiteraryEntityExtractor
 from db import ChromaManager
-from utils.epub_parser import EpubParser
+from utils import EpubParser
 
 CHUNK_SIZE = 2048
 CHUNK_OVERLAP = 256
 EMBEDDING_SIZE = 1024
 
 load_dotenv()
-llm = ChatOllama(
-    model=os.getenv('AGENT_LLM_MODEL', 'qwen3:14b'),
-    base_url=os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434'),
-)
-embedder = OllamaEmbeddings(
-    model=os.getenv('EMBEDDING_MODEL', 'bge-m3:567m'),
-    base_url=os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434')
-)
+OLLAMA_HOST = os.getenv('OLLAMA_HOST', 'localhost')
+OLLAMA_PORT = os.getenv('OLLAMA_PORT', '11434')
+OLLAMA_BASE_URL = f'http://{OLLAMA_HOST}:{OLLAMA_PORT}'
 
 
-def create_json(file_path: str, start_from: int = 0) -> str:
+def preload_ollama_models():
+    models = [
+        os.getenv('LLM_MODEL', 'qwen3:14b'),
+        os.getenv('EMBEDDING_MODEL', 'bge-m3:567m')
+    ]
+    for model in models:
+        print(f'Preloading {model}...')
+        try:
+            response = httpx.post(
+                f'{OLLAMA_BASE_URL}/api/pull',
+                json={'name': model},
+                timeout=600
+            )
+            response.raise_for_status()
+            print(f'{model} loaded')
+        except Exception as e:
+            print(f'Failed to load {model}: {e}')
+
+    llm = ChatOllama(
+        model=os.getenv('LLM_MODEL', 'qwen3:14b'),
+        base_url=OLLAMA_BASE_URL,
+    )
+    embedder = OllamaEmbeddings(
+        model=os.getenv('EMBEDDING_MODEL', 'bge-m3:567m'),
+        base_url=OLLAMA_BASE_URL
+    )
+
+    return llm, embedder
+
+
+def create_json(
+        llm, embedder,
+        file_path: str,
+        start_from: int = 0) -> str:
     try:
         book = EpubParser(file_path)
     except Exception as e:
@@ -42,7 +71,7 @@ def create_json(file_path: str, start_from: int = 0) -> str:
         chunk_size=CHUNK_SIZE,
         chunk_overlap=CHUNK_OVERLAP,
         length_function=len,
-        separators=["\n\n", "\n", ". ", " ", ""]
+        separators=['\n\n', '\n', '. ', ' ', '']
     )
 
     all_chunks: List[Dict[str, Any]] = []
@@ -109,9 +138,11 @@ def create_json(file_path: str, start_from: int = 0) -> str:
 
 
 def main(file_path: str | None = None, start_from: int = 0):
+    llm, embedder = preload_ollama_models()
     if file_path:
         try:
-            json_path = Path(create_json(file_path, start_from=start_from))
+            json_path = Path(
+                create_json(llm, embedder, file_path, start_from=start_from))
         except KeyboardInterrupt:
             print('Преобразование прервано пользователем')
             return
@@ -125,7 +156,7 @@ def main(file_path: str | None = None, start_from: int = 0):
         manager.load_from_json(json_file)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     if len(sys.argv) < 2:
         main()
         sys.exit(1)

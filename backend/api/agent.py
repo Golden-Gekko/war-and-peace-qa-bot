@@ -1,5 +1,3 @@
-# app/agent.py
-
 import os
 from typing import AsyncGenerator, Literal, List, Optional
 import yaml
@@ -13,6 +11,9 @@ from langchain_ollama import ChatOllama
 
 from api.tools.contextual_retrieval_tool import ContextualRetrievalTool
 
+OLLAMA_HOST = os.getenv('OLLAMA_HOST', 'localhost')
+OLLAMA_PORT = os.getenv('OLLAMA_PORT', '11434')
+
 
 class WarAndPeaceAgent:
     def __init__(
@@ -20,9 +21,8 @@ class WarAndPeaceAgent:
         system_prompt: Optional[str] = None,
         temperature: float = 0.3
     ):
-        self.llm_model = os.getenv('AGENT_LLM_MODEL', 'qwen3:14b')
-        self.ollama_base_url = os.getenv(
-            'OLLAMA_BASE_URL', 'http://localhost:11434')
+        self.llm_model = os.getenv('LLM_MODEL', 'qwen3:14b')
+        self.ollama_base_url = f'http://{OLLAMA_HOST}:{OLLAMA_PORT}'
         self.temperature = temperature
 
         self.system_prompt = system_prompt or WarAndPeaceAgent._get_promt()
