@@ -45,6 +45,9 @@ class WarAndPeaceAgent:
             return yaml.safe_load(f)['promt']
         return ''
 
+    def _create_system_message(self):
+        return [SystemMessage(content=self.system_prompt)]
+
     def _build_graph(self):
         class AgentState(MessagesState):
             pass
@@ -52,10 +55,10 @@ class WarAndPeaceAgent:
         def agent_node(
                 state: AgentState, config: RunnableConfig) -> AgentState:
             messages = state['messages']
-            if not any(isinstance(m, SystemMessage) for m in messages):
-                messages = (
-                    [SystemMessage(content=self.system_prompt)] + messages)
-
+            if not messages or not isinstance(messages[0], SystemMessage):
+                messages = [SystemMessage(content=self.system_prompt)] + [
+                    m for m in messages if not isinstance(m, SystemMessage)
+                ]
             response = self.llm_with_tools.invoke(messages, config)
             return {'messages': messages + [response]}
 
@@ -101,7 +104,7 @@ class WarAndPeaceAgent:
         query: str,
         chat_history: List[BaseMessage] | None = None
     ) -> AsyncGenerator[str, None]:
-        messages = chat_history or []
+        messages = self._create_system_message()
         messages.append(HumanMessage(content=query))
 
         async for event in self.graph.astream_events({'messages': messages}):
