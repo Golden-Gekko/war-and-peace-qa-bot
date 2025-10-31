@@ -33,9 +33,21 @@ async function sendMessage() {
     sendButton.disabled = true;
     
     // Show typing indicator
-    typingIndicator.style.display = 'block';
     chatMessages.scrollTop = chatMessages.scrollHeight;
     try {
+        // Create agent message container
+        let agentMessageElement = null;
+        agentMessageElement = document.createElement('div');
+        agentMessageElement.className = 'message agent-message';
+        agentMessageElement.innerHTML = `
+            <div class="message-header">Агент "Война и Мир"</div>
+            <div class="message-content"></div>
+        `;
+        agentMessageElement.querySelector('.message-content').innerHTML = marked.parse('*Агент в раздумьях...*');
+        chatMessages.appendChild(agentMessageElement);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+        await new Promise(resolve => requestAnimationFrame(resolve));
+
         const response = await fetch('/api/generate', {
             method: 'POST',
             headers: {
@@ -49,17 +61,6 @@ async function sendMessage() {
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let agentMessage = '';
-        let agentMessageElement = null;
-        // Create agent message container
-        agentMessageElement = document.createElement('div');
-        agentMessageElement.className = 'message agent-message';
-        agentMessageElement.innerHTML = `
-            <div class="message-header">Агент "Война и Мир"</div>
-            <div class="message-content"></div>
-        `;
-        chatMessages.appendChild(agentMessageElement);
-        typingIndicator.style.display = 'none';
-        chatMessages.scrollTop = chatMessages.scrollHeight;
         while (true) {
             const { done, value } = await reader.read();
             if (done) break;
@@ -67,7 +68,6 @@ async function sendMessage() {
             const chunk = decoder.decode(value, { stream: true });
             agentMessage += chunk;
             
-            // Update message content with markdown rendering
             if (agentMessageElement) {
                 agentMessageElement.querySelector('.message-content').innerHTML = marked.parse(agentMessage);
                 chatMessages.scrollTop = chatMessages.scrollHeight;

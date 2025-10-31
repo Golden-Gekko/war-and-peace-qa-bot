@@ -6,10 +6,11 @@ from typing import List, Dict, Any
 from tqdm import tqdm
 import uuid
 
+from dotenv import load_dotenv
 from langchain_ollama import ChatOllama, OllamaEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-from app.literary_entity_extractor import LiteraryEntityExtractor
+from api.literary_entity_extractor import LiteraryEntityExtractor
 from db import ChromaManager
 from utils.epub_parser import EpubParser
 
@@ -17,8 +18,15 @@ CHUNK_SIZE = 2048
 CHUNK_OVERLAP = 256
 EMBEDDING_SIZE = 1024
 
-llm = ChatOllama(model='qwen3:14b')
-embedder = OllamaEmbeddings(model='bge-m3:567m')
+load_dotenv()
+llm = ChatOllama(
+    model=os.getenv('AGENT_LLM_MODEL', 'qwen3:14b'),
+    base_url=os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434'),
+)
+embedder = OllamaEmbeddings(
+    model=os.getenv('EMBEDDING_MODEL', 'bge-m3:567m'),
+    base_url=os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434')
+)
 
 
 def create_json(file_path: str, start_from: int = 0) -> str:

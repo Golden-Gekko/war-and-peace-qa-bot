@@ -1,18 +1,20 @@
 import os
 from pathlib import Path
 
+import httpx
+import uvicorn
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-import httpx
 
 app = FastAPI()
 app.mount('/static', StaticFiles(directory='static'), 'static')
 templates = Jinja2Templates(directory='static')
 
 load_dotenv()
+FRONTEND_PORT = os.getenv('FRONTEND_PORT', '8001')
 BACKEND_HOST = os.getenv('BACKEND_HOST', 'localhost')
 BACKEND_PORT = os.getenv('BACKEND_PORT', '8000')
 BACKEND_URL = f'http://{BACKEND_HOST}:{BACKEND_PORT}'
@@ -27,21 +29,22 @@ async def favicon():
 async def proxy_generate(request: Request):
     body = await request.body()
     headers = {'Content-Type': 'application/json'}
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        try:
-            backend_resp = await client.post(
+
+    async def stream_from_backend():
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            async with client.stream(
+                'POST',
                 f'{BACKEND_URL}/api/generate',
                 content=body,
                 headers=headers,
-            )
-            return StreamingResponse(
-                backend_resp.aiter_bytes(),
-                status_code=backend_resp.status_code,
-                media_type='text/event-stream',
-                headers=dict(backend_resp.headers),
-            )
-        except httpx.RequestError as e:
-            raise RuntimeError(f'Backend unreachable: {e}')
+            ) as backend_resp:
+                async for chunk in backend_resp.aiter_bytes():
+                    yield chunk
+
+    return StreamingResponse(
+        stream_from_backend(),
+        media_type='text/event-stream',
+    )
 
 
 @app.get('/')
@@ -50,3 +53,9 @@ async def main_page(request: Request):
         name='index.html',
         context={'request': request}
     )
+
+
+if __name__ == '__main__':
+    uvicorn.run(
+        'main:app',
+        port=int(FRONTEND_PORT) if FRONTEND_PORT.isdigit() else 8001)
