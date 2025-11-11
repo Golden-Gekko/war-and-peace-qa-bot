@@ -38,6 +38,13 @@ class ChromaManager:
             raise ValueError(
                 f'Ошибка при очистке коллекции "{collection_name}": {e}')
 
+    def delete_collection(
+            self, collection_name: str = 'war_and_peace') -> None:
+        if collection_name in [
+            col.name for col in self.client.list_collections()
+        ]:
+            self.client.delete_collection(collection_name)
+
     def load_from_json(
         self, json_path: Union[str, Path],
         collection_name: str = 'war_and_peace'

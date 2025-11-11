@@ -14,7 +14,7 @@ OLLAMA_HOST = os.getenv('OLLAMA_HOST', 'localhost')
 OLLAMA_PORT = os.getenv('OLLAMA_PORT', '11434')
 OLLAMA_BASE_URL = f'http://{OLLAMA_HOST}:{OLLAMA_PORT}'
 MAX_LOG_LEN = 100
-MAX_CONTEXT_LEN = 5
+MAX_CONTEXT_LEN = 2
 
 
 def get_llm():
@@ -108,15 +108,15 @@ class ContextualRetrievalTool(BaseTool):
             prev_id = res['prev_id']
             next_id = res['next_id']
 
-            if prev_id:
-                prev_res = chroma.get(prev_id)
-                if prev_res['documents']:
-                    expanded.append(prev_res['documents'][0])
+            # if prev_id:
+            #     prev_res = chroma.get(prev_id)
+            #     if prev_res['documents']:
+            #         expanded.append(prev_res['documents'][0])
             expanded.append(res['text'])
-            if next_id:
-                next_res = chroma.get(next_id)
-                if next_res['documents']:
-                    expanded.append(next_res['documents'][0])
+            # if next_id:
+            #     next_res = chroma.get(next_id)
+            #     if next_res['documents']:
+            #         expanded.append(next_res['documents'][0])
         return expanded
 
     def _run(self, query: str, **kwargs: Any) -> str:

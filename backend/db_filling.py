@@ -14,10 +14,10 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from api.literary_entity_extractor import LiteraryEntityExtractor
 from db import ChromaManager
 from utils import EpubParser
-
-CHUNK_SIZE = 2048
+# python db_filling.py D:\Dev\Otus\WarAndPeace.epub
+CHUNK_SIZE = 4096
 CHUNK_OVERLAP = 256
-EMBEDDING_SIZE = 1024
+EMBEDDING_SIZE = 4096
 
 load_dotenv()
 OLLAMA_HOST = os.getenv('OLLAMA_HOST', 'localhost')
@@ -151,7 +151,7 @@ def main(file_path: str | None = None, start_from: int = 0):
             os.path.join(os.path.dirname(os.path.abspath(__file__)), 'JSON'))
 
     manager = ChromaManager(persist_directory='./chroma_db')
-    manager.clear_collection()
+    manager.delete_collection()
     for json_file in json_path.glob('*.json'):
         manager.load_from_json(json_file)
 
