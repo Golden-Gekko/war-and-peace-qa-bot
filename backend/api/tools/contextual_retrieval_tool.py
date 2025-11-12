@@ -57,6 +57,10 @@ class ContextualRetrievalTool(BaseTool):
     description: str = get_tool_description()
     args_schema: type[BaseModel] = ContextualRetrievalInput
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        object.__setattr__(self, 'last_context', '')
+
     def _filter_by_characters(
             self, results: Dict, characters: List[str]) -> List[Dict]:
         if not characters:
@@ -108,16 +112,19 @@ class ContextualRetrievalTool(BaseTool):
             prev_id = res['prev_id']
             next_id = res['next_id']
 
-            # if prev_id:
-            #     prev_res = chroma.get(prev_id)
-            #     if prev_res['documents']:
-            #         expanded.append(prev_res['documents'][0])
+            if prev_id:
+                prev_res = chroma.get(prev_id)
+                if prev_res['documents']:
+                    expanded.append(prev_res['documents'][0])
             expanded.append(res['text'])
-            # if next_id:
-            #     next_res = chroma.get(next_id)
-            #     if next_res['documents']:
-            #         expanded.append(next_res['documents'][0])
+            if next_id:
+                next_res = chroma.get(next_id)
+                if next_res['documents']:
+                    expanded.append(next_res['documents'][0])
         return expanded
+
+    def _flatted_context(self, initial_results: List[Dict]) -> List[str]:
+        return [res['text'] for res in initial_results]
 
     def _run(self, query: str, **kwargs: Any) -> str:
         try:
@@ -155,12 +162,17 @@ class ContextualRetrievalTool(BaseTool):
                     logger.info('Не найдено релевантных фрагментов')
                     return 'Не найдено релевантных фрагментов.'
 
-            expanded_context = self._expand_context_with_neighbors(
-                chroma, filtered_by_chars)
+            expanded_context = self._flatted_context(filtered_by_chars)
             for item in expanded_context[:MAX_CONTEXT_LEN]:
                 logger.info(f'Получен ответ от БД: {item[:MAX_LOG_LEN]}')
-            return '\n\n'.join(expanded_context[:MAX_CONTEXT_LEN])
+            final_context = '\n\n'.join(expanded_context[:MAX_CONTEXT_LEN])
+            object.__setattr__(self, 'last_context', final_context)
+            return final_context
 
         except Exception as e:
             logger.error(f'Ошибка при поиске контекста: {str(e)}')
+            object.__setattr__(self, 'last_context', '')
             return f'Ошибка при поиске контекста: {str(e)}'
+
+    def get_last_context(self) -> str:
+        return getattr(self, 'last_context', '')

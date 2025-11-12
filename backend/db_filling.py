@@ -14,7 +14,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from api.literary_entity_extractor import LiteraryEntityExtractor
 from db import ChromaManager
 from utils import EpubParser
-# python db_filling.py D:\Dev\Otus\WarAndPeace.epub
+
 CHUNK_SIZE = 4096
 CHUNK_OVERLAP = 256
 EMBEDDING_SIZE = 4096

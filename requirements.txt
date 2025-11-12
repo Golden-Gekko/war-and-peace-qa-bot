@@ -9,3 +9,5 @@ langchain_text_splitters==1.0
 fastapi[all]==0.120.1
 grandalf==0.8
 loguru==0.7.3
+datasets==4.4.1
+ragas==0.3.8

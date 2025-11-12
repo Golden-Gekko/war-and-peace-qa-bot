@@ -27,7 +27,9 @@ class WarAndPeaceAgent:
 
         self.system_prompt = system_prompt or WarAndPeaceAgent._get_promt()
 
-        self.tools = [ContextualRetrievalTool()]
+        self.tool_instance = ContextualRetrievalTool()
+        self.tools = [self.tool_instance]
+
         llm = ChatOllama(
             model=self.llm_model,
             base_url=self.ollama_base_url,
